@@ -10,6 +10,7 @@ import FestivalsPage from "../pages/FestivalsPage";
 import AgriculturePage from "../pages/AgriculturePage";
 import EducationPage from "../pages/EducationPage";
 import SportsPage from "../pages/SportsPage";
+import CricketLiveScorePage from "../pages/CricketLiveScorePage";
 import MissionPage from "../pages/MissionPage";
 import InitiativesPage from "../pages/InitiativesPage";
 import TechHubPage from "../pages/TechHubPage";
@@ -47,6 +48,10 @@ export const router = createHashRouter([
       {
         path: "community/sports",
         element: <SportsPage />
+      },
+      {
+        path: "community/sports/cricket-live-score",
+        element: <CricketLiveScorePage />
       },
       {
         path: "mission",

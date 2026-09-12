@@ -1,8 +1,20 @@
 import { ArrowRight } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 import { sportsModules } from "./sportsData";
 
 export default function SportsProgramGrid() {
+  const navigate = useNavigate();
+
+  const handleOpen = (title: string) => {
+    if (title === "Cricket Live Score") {
+      navigate("/community/sports/cricket-live-score");
+      return;
+    }
+
+    navigate("/community/sports");
+  };
+
   return (
     <section className="mt-10 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
       {sportsModules.map(({ title, description, icon: Icon, accent, border, tag, highlights }) => (
@@ -34,6 +46,7 @@ export default function SportsProgramGrid() {
 
           <button
             type="button"
+            onClick={() => handleOpen(title)}
             className="mt-5 inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#b7781f] text-white shadow-sm transition group-hover:translate-x-1 group-hover:bg-[#915d15]"
             aria-label={`Open ${title}`}
           >
