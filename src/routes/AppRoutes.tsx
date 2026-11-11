@@ -15,6 +15,7 @@ import MissionPage from "../pages/MissionPage";
 import InitiativesPage from "../pages/InitiativesPage";
 import TechHubPage from "../pages/TechHubPage";
 import FuturePage from "../pages/FuturePage";
+import MyCommunityPage from "../pages/MyCommunityPage";
 
 export const router = createHashRouter([
   {
@@ -32,6 +33,34 @@ export const router = createHashRouter([
       {
         path: "community",
         element: <CommunityPage />
+      },
+      {
+        path: "apps/my-community",
+        element: <MyCommunityPage />
+      },
+      {
+        path: "apps/my-community/community",
+        element: <CommunityPage />
+      },
+      {
+        path: "apps/my-community/community/festivals",
+        element: <FestivalsPage />
+      },
+      {
+        path: "apps/my-community/community/agriculture",
+        element: <AgriculturePage />
+      },
+      {
+        path: "apps/my-community/community/education",
+        element: <EducationPage />
+      },
+      {
+        path: "apps/my-community/community/sports",
+        element: <SportsPage />
+      },
+      {
+        path: "apps/my-community/community/sports/cricket-live-score",
+        element: <CricketLiveScorePage />
       },
       {
         path: "community/festivals",

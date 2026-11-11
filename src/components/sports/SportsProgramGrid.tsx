@@ -1,18 +1,20 @@
 import { ArrowRight } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 import { sportsModules } from "./sportsData";
+import { getCommunityRoute } from "../../utils/communityRoutes";
 
 export default function SportsProgramGrid() {
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleOpen = (title: string) => {
     if (title === "Cricket Live Score") {
-      navigate("/community/sports/cricket-live-score");
+      navigate(getCommunityRoute(location.pathname, "/community/sports/cricket-live-score"));
       return;
     }
 
-    navigate("/community/sports");
+    navigate(getCommunityRoute(location.pathname, "/community/sports"));
   };
 
   return (

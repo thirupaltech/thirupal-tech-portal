@@ -1,9 +1,11 @@
 import React from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import AnnouncementBadge from "../common/AnnouncementBadge";
+import { getCommunityRoute } from "../../utils/communityRoutes";
 
 const CommunityCards: React.FC<{ onShowHero?: () => void }> = ({ onShowHero }) => {
   const navigate = useNavigate();
+    const location = useLocation();
   return (
     <section className="mx-auto max-w-5xl px-6 py-8">
         <div className="flex items-center justify-between">
@@ -12,7 +14,7 @@ const CommunityCards: React.FC<{ onShowHero?: () => void }> = ({ onShowHero }) =
 
         <div className="mt-6 space-y-6">
             <section className="rounded-[24px] border border-[#e4ece4] bg-white p-6 shadow-[0_10px_24px_rgba(15,23,42,0.04)] transition duration-200 hover:-translate-y-0.5 hover:bg-[#f5faf7] hover:shadow-[0_18px_30px_rgba(15,23,42,0.08)]">
-                <div className="flex cursor-pointer items-center gap-4" onClick={() => navigate('/community/agriculture')}>
+                <div className="flex cursor-pointer items-center gap-4" onClick={() => navigate(getCommunityRoute(location.pathname, '/community/agriculture'))}>
                     <div className="flex items-center gap-4">
                         <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#edf7ef] text-2xl shadow-sm">🌾</div>
                         <div>
@@ -24,7 +26,7 @@ const CommunityCards: React.FC<{ onShowHero?: () => void }> = ({ onShowHero }) =
             </section>
 
             <section className="rounded-[24px] border border-[#e4ece4] bg-white p-6 shadow-[0_10px_24px_rgba(15,23,42,0.04)] transition duration-200 hover:-translate-y-0.5 hover:bg-[#f5faf7] hover:shadow-[0_18px_30px_rgba(15,23,42,0.08)]">
-                <div className="flex cursor-pointer items-center gap-4" onClick={() => navigate('/community/education')}>
+                <div className="flex cursor-pointer items-center gap-4" onClick={() => navigate(getCommunityRoute(location.pathname, '/community/education'))}>
                     <div className="flex items-center gap-4">
                         <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#edf7ef] text-2xl shadow-sm">🎓</div>
                         <div>
@@ -37,11 +39,11 @@ const CommunityCards: React.FC<{ onShowHero?: () => void }> = ({ onShowHero }) =
 
             <section className="relative rounded-[24px] border border-[#e4ece4] bg-white p-6 shadow-[0_10px_24px_rgba(15,23,42,0.04)] transition duration-200 hover:-translate-y-0.5 hover:bg-[#f5faf7] hover:shadow-[0_18px_30px_rgba(15,23,42,0.08)]">
                 <AnnouncementBadge
-                    onClick={() => { if (onShowHero) { onShowHero(); } else { navigate('/community/festivals'); } }}
+                    onClick={() => { if (onShowHero) { onShowHero(); } else { navigate(getCommunityRoute(location.pathname, '/community/festivals')); } }}
                     className="absolute right-4 top-4"
                     ariaLabel="New Update - open festivals"
                 />
-                <div className="flex cursor-pointer items-center gap-4" onClick={() => { if (onShowHero) { onShowHero(); } else { navigate('/community/festivals'); } }}>
+                <div className="flex cursor-pointer items-center gap-4" onClick={() => { if (onShowHero) { onShowHero(); } else { navigate(getCommunityRoute(location.pathname, '/community/festivals')); } }}>
                     <div className="flex items-center gap-4">
                         <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#edf7ef] text-2xl shadow-sm">🎉</div>
                         <div>
@@ -53,7 +55,7 @@ const CommunityCards: React.FC<{ onShowHero?: () => void }> = ({ onShowHero }) =
             </section>
 
             <section className="rounded-[24px] border border-[#e4ece4] bg-white p-6 shadow-[0_10px_24px_rgba(15,23,42,0.04)] transition duration-200 hover:-translate-y-0.5 hover:bg-[#f5faf7] hover:shadow-[0_18px_30px_rgba(15,23,42,0.08)]">
-                <div className="flex cursor-pointer items-center gap-4" onClick={() => navigate('/community/sports')} >
+                <div className="flex cursor-pointer items-center gap-4" onClick={() => navigate(getCommunityRoute(location.pathname, '/community/sports'))} >
                     <div className="flex items-center gap-4">
                         <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#edf7ef] text-2xl shadow-sm">🏆</div>
                         <div>

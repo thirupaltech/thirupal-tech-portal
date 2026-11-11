@@ -12,7 +12,8 @@ import {
   Trophy,
   Users,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
+import { getCommunityRoute } from "../utils/communityRoutes";
 
 const tabs = ["Overview", "Scorecard", "Commentary", "Insights", "Fixtures"] as const;
 type Tab = (typeof tabs)[number];
@@ -220,6 +221,7 @@ const matchSelections: MatchSelection[] = [
 
 export default function CricketLiveScorePage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [activeTab, setActiveTab] = useState<Tab>("Overview");
   const [selectedMatchId, setSelectedMatchId] = useState(matchSelections[0].id);
 
@@ -466,7 +468,7 @@ export default function CricketLiveScorePage() {
     <main className="mx-auto max-w-[1320px] px-4 pb-12 pt-6 md:px-6 lg:px-8">
       <button
         type="button"
-        onClick={() => navigate("/community/sports")}
+        onClick={() => navigate(getCommunityRoute(location.pathname, "/community/sports"))}
         className="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:border-amber-300 hover:text-slate-900"
       >
         <ArrowLeft className="h-4 w-4" />

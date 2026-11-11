@@ -1,14 +1,16 @@
 import { ArrowLeft, Droplets } from "lucide-react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 
 import AgricultureFeatureGrid from "../components/agriculture/AgricultureFeatureGrid";
 import CropPlannerCard from "../components/agriculture/CropPlannerCard";
 import EquipmentMarketplace from "../components/agriculture/EquipmentMarketplace";
 import FarmProfitCalculator from "../components/agriculture/FarmProfitCalculator";
 import ProduceMarketplace from "../components/agriculture/ProduceMarketplace";
+import { getCommunityRoute } from "../utils/communityRoutes";
 
 export default function AgriculturePage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedView = searchParams.get("view");
 
@@ -38,7 +40,7 @@ export default function AgriculturePage() {
           <div className="relative z-20 flex items-center gap-2 px-5 pt-5 text-sm text-slate-600 md:px-7 md:pt-6">
             <button
               type="button"
-              onClick={() => navigate("/community")}
+              onClick={() => navigate(getCommunityRoute(location.pathname, "/community"))}
               className="inline-flex items-center gap-2 rounded-full px-2 py-1 text-[#4f7a53] transition hover:bg-white/60 hover:text-[#2a5541]"
             >
               <ArrowLeft className="h-4 w-4" />
@@ -116,7 +118,7 @@ export default function AgriculturePage() {
 
           <button
             type="button"
-            onClick={() => navigate("/community")}
+            onClick={() => navigate(getCommunityRoute(location.pathname, "/community"))}
             className="text-sm font-medium text-slate-500 transition hover:text-slate-700"
           >
             Back to Community

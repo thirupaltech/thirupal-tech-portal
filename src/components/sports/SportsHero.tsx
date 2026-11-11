@@ -1,15 +1,17 @@
 import { ArrowLeft, Quote } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
+import { getCommunityRoute } from "../../utils/communityRoutes";
 
 export default function SportsHero() {
   const navigate = useNavigate();
+  const location = useLocation();
 
   return (
     <section className="relative overflow-hidden rounded-[30px] border border-[#f2e6d1] bg-[#fff7eb] shadow-[0_20px_50px_rgba(15,23,42,0.06)]">
       <div className="relative z-20 flex items-center gap-2 px-5 pt-5 text-sm text-slate-600 md:px-7 md:pt-6">
         <button
           type="button"
-          onClick={() => navigate("/community")}
+          onClick={() => navigate(getCommunityRoute(location.pathname, "/community"))}
           className="inline-flex items-center gap-2 rounded-full px-2 py-1 text-[#9a5b17] transition hover:bg-white/70 hover:text-[#724410]"
         >
           <ArrowLeft className="h-4 w-4" />
