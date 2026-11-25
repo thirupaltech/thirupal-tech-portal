@@ -1,42 +1,18 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
-import { ArrowRight, BookOpen, CalendarDays, Check, CircleUserRound, LogOut, Users } from "lucide-react";
+import { ArrowRight, BookOpen, Bot, CalendarDays, Check, CircleUserRound, LogOut, Send, Sparkles, Users } from "lucide-react";
 import { getCommunityRoute } from "../utils/communityRoutes";
 import { useLocation } from "react-router-dom";
+import { loginUser, registerUser } from "../services/userAuthService";
+import type { CommunityMember } from "../services/userAuthService";
 
-type CommunityAccount = {
-  name: string;
-  email: string;
-  salt: string;
-  passwordHash: string;
-};
-
-type CommunityMember = Pick<CommunityAccount, "name" | "email">;
-
-const accountsKey = "thirupal-community-accounts";
 const sessionKey = "thirupal-community-member";
+const tokenKey = "thirupal-community-token";
 
-function readAccounts(): CommunityAccount[] {
-  try {
-    return JSON.parse(localStorage.getItem(accountsKey) ?? "[]") as CommunityAccount[];
-  } catch {
-    return [];
-  }
-}
-
-function bytesToHex(bytes: Uint8Array) {
-  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
-}
-
-async function hashPassword(password: string, salt: string) {
-  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(password), "PBKDF2", false, ["deriveBits"]);
-  const bits = await crypto.subtle.deriveBits(
-    { name: "PBKDF2", salt: Uint8Array.from(salt.match(/.{2}/g) ?? [], (byte) => parseInt(byte, 16)), iterations: 120000, hash: "SHA-256" },
-    key,
-    256
-  );
-  return bytesToHex(new Uint8Array(bits));
-}
+type ChatMessage = {
+  role: "user" | "assistant";
+  content: string;
+};
 
 function readMember(): CommunityMember | null {
   try {
@@ -52,9 +28,12 @@ export default function MyCommunityPage() {
   const [mode, setMode] = useState<"login" | "register">("register");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const [chatDraft, setChatDraft] = useState("");
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -63,38 +42,18 @@ export default function MyCommunityPage() {
 
     try {
       const normalizedEmail = email.trim().toLowerCase();
-      const accounts = readAccounts();
-      let signedInMember: CommunityMember | undefined;
+      const result = mode === "register"
+        ? await registerUser({ name: name.trim(), email: normalizedEmail, phone: phone.trim(), password })
+        : await loginUser({ email: normalizedEmail, password });
 
-      if (mode === "register") {
-        if (accounts.some((account) => account.email === normalizedEmail)) {
-          setMessage("An account with this email already exists. Sign in instead.");
-          return;
-        }
-
-        const salt = bytesToHex(crypto.getRandomValues(new Uint8Array(16)));
-        const account = {
-          name: name.trim(),
-          email: normalizedEmail,
-          salt,
-          passwordHash: await hashPassword(password, salt),
-        };
-        localStorage.setItem(accountsKey, JSON.stringify([...accounts, account]));
-        signedInMember = { name: account.name, email: account.email };
-      } else {
-        const account = accounts.find((item) => item.email === normalizedEmail);
-        if (!account || await hashPassword(password, account.salt) !== account.passwordHash) {
-          setMessage("We couldn't sign you in with those details.");
-          return;
-        }
-        signedInMember = { name: account.name, email: account.email };
-      }
-
+      const signedInMember = result.member;
       sessionStorage.setItem(sessionKey, JSON.stringify(signedInMember));
+      if (result.token) sessionStorage.setItem(tokenKey, result.token);
+      else sessionStorage.removeItem(tokenKey);
       setMember(signedInMember);
       setPassword("");
-    } catch {
-      setMessage("Account storage is unavailable in this browser. Please try again.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Unable to complete your request. Please try again.");
     } finally {
       setBusy(false);
     }
@@ -102,8 +61,25 @@ export default function MyCommunityPage() {
 
   function signOut() {
     sessionStorage.removeItem(sessionKey);
+    sessionStorage.removeItem(tokenKey);
     setMember(null);
     setMode("login");
+  }
+
+  function handleChatSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const question = chatDraft.trim();
+    if (!question) return;
+
+    setChatMessages((messages) => [
+      ...messages,
+      { role: "user", content: question },
+      {
+        role: "assistant",
+        content: "The chat interface is ready, but an AI service still needs to be connected before I can answer. In the meantime, you can explore the community updates here.",
+      },
+    ]);
+    setChatDraft("");
   }
 
   if (member) {
@@ -121,22 +97,57 @@ export default function MyCommunityPage() {
             </button>
           </header>
 
-          <section className="grid gap-8 py-8 lg:grid-cols-[1.4fr_0.8fr]">
-            <div>
-              <div className="mb-4 flex items-center justify-between">
-                <h2 className="text-xl font-bold text-[#183a32]">Community updates</h2>
-                <span className="text-sm text-slate-500">Latest</span>
-              </div>
-              <article className="border border-[#dce4da] bg-white p-6 md:p-8">
-                <div className="flex items-center gap-3 text-sm text-[#59806d]">
-                  <span className="grid h-9 w-9 place-items-center rounded-full bg-[#e6f0e8]"><Users size={17} /></span>
-                  Community team <span className="text-slate-400">/</span> Welcome
+          <section className="grid items-start gap-8 py-8 lg:grid-cols-[1.4fr_0.8fr]">
+            <section aria-labelledby="community-ai-heading" className="overflow-hidden border border-[#dce4da] bg-white shadow-sm">
+              <header className="flex flex-wrap items-center justify-between gap-4 border-b border-[#e7eee6] px-5 py-4 md:px-6">
+                <div className="flex items-center gap-3">
+                  <span className="grid h-11 w-11 place-items-center rounded-xl bg-[#e6f0e8] text-[#23845f]"><Bot size={23} /></span>
+                  <div>
+                    <h2 id="community-ai-heading" className="font-bold text-[#183a32]">Community AI</h2>
+                    <p className="text-sm text-slate-500">Your guide to programs, events, and resources</p>
+                  </div>
                 </div>
-                <h3 className="mt-5 text-2xl font-bold text-[#183a32]">Good things grow when we build them together.</h3>
-                <p className="mt-3 max-w-2xl leading-7 text-slate-600">Your community space is ready. Explore local programs, meet people with shared interests, and keep up with upcoming events.</p>
-                <a href={`/#${getCommunityRoute(location.pathname, "/community")}`} className="mt-6 inline-flex items-center gap-2 text-sm font-bold text-[#177454] hover:underline">Explore the community <ArrowRight size={16} /></a>
-              </article>
-            </div>
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-[#f2f6f1] px-3 py-1.5 text-xs font-semibold text-[#59806d]"><Sparkles size={13} /> Preview</span>
+              </header>
+
+              <div className="flex min-h-[390px] flex-col bg-[#f8faf7] p-4 md:p-6">
+                <div role="log" aria-live="polite" aria-label="Community AI conversation" className="flex-1 space-y-4">
+                  <div className="flex items-start gap-3">
+                    <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#dcece0] text-[#23845f]"><Bot size={17} /></span>
+                    <div className="max-w-[85%] rounded-2xl rounded-tl-sm border border-[#e4ece2] bg-white px-4 py-3 text-sm leading-6 text-slate-700 shadow-sm">
+                      Hi {member.name.split(" ")[0]}! I can help you find community programs, upcoming events, and learning resources. What would you like to explore?
+                    </div>
+                  </div>
+                  {chatMessages.map((chatMessage, index) => (
+                    <div key={`${index}-${chatMessage.role}`} className={`flex items-start gap-3 ${chatMessage.role === "user" ? "justify-end" : ""}`}>
+                      {chatMessage.role === "assistant" && <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#dcece0] text-[#23845f]"><Bot size={17} /></span>}
+                      <p className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-6 ${chatMessage.role === "user" ? "rounded-tr-sm bg-[#176347] text-white" : "rounded-tl-sm border border-[#e4ece2] bg-white text-slate-700 shadow-sm"}`}>{chatMessage.content}</p>
+                    </div>
+                  ))}
+                </div>
+
+                {chatMessages.length === 0 && (
+                  <div className="mt-6">
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Try asking</p>
+                    <div className="flex flex-wrap gap-2">
+                      {["What events are coming up?", "Show me learning programs", "How can I get involved?"].map((prompt) => (
+                        <button key={prompt} type="button" onClick={() => setChatDraft(prompt)} className="rounded-full border border-[#dce4da] bg-white px-3 py-2 text-left text-xs font-medium text-[#35564a] transition hover:border-[#8db49a] hover:bg-[#f1f7f1]">
+                          {prompt}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <form onSubmit={handleChatSubmit} className="mt-5 flex items-center gap-2 rounded-xl border border-[#dce4da] bg-white p-2 shadow-sm focus-within:border-[#8db49a]">
+                  <label htmlFor="community-ai-message" className="sr-only">Message Community AI</label>
+                  <input id="community-ai-message" value={chatDraft} onChange={(event) => setChatDraft(event.target.value)} placeholder="Ask about your community..." className="min-w-0 flex-1 bg-transparent px-2 py-2 text-sm text-slate-700 outline-none placeholder:text-slate-400" />
+                  <button type="submit" disabled={!chatDraft.trim()} aria-label="Send message" className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-[#176347] text-white transition hover:bg-[#104e39] disabled:cursor-not-allowed disabled:opacity-40"><Send size={17} /></button>
+                </form>
+                <p className="mt-2 text-center text-xs text-slate-400">Preview interface — AI responses are not connected yet.</p>
+              </div>
+            </section>
+
             <aside>
               <h2 className="mb-4 text-xl font-bold text-[#183a32]">Your profile</h2>
               <div className="border border-[#dce4da] bg-white p-5">
@@ -152,6 +163,22 @@ export default function MyCommunityPage() {
                   <p className="mt-3 flex items-center gap-2"><CalendarDays size={16} className="text-[#23845f]" /> Events and programs</p>
                   <p className="mt-3 flex items-center gap-2"><BookOpen size={16} className="text-[#23845f]" /> Learning resources</p>
                 </div>
+              </div>
+
+              <div className="mt-7">
+                <div className="mb-4 flex items-center justify-between">
+                  <h2 className="text-xl font-bold text-[#183a32]">Community updates</h2>
+                  <span className="text-sm text-slate-500">Latest</span>
+                </div>
+                <article className="border border-[#dce4da] bg-white p-5">
+                  <div className="flex items-center gap-3 text-sm text-[#59806d]">
+                    <span className="grid h-9 w-9 place-items-center rounded-full bg-[#e6f0e8]"><Users size={17} /></span>
+                    Community team <span className="text-slate-400">/</span> Welcome
+                  </div>
+                  <h3 className="mt-4 text-lg font-bold text-[#183a32]">Good things grow when we build them together.</h3>
+                  <p className="mt-2 text-sm leading-6 text-slate-600">Explore local programs, meet people with shared interests, and keep up with upcoming events.</p>
+                  <a href={`/#${getCommunityRoute(location.pathname, "/community")}`} className="mt-4 inline-flex items-center gap-2 text-sm font-bold text-[#177454] hover:underline">Explore the community <ArrowRight size={16} /></a>
+                </article>
               </div>
             </aside>
           </section>
@@ -189,6 +216,12 @@ export default function MyCommunityPage() {
                   <input required autoComplete="name" minLength={2} value={name} onChange={(event) => setName(event.target.value)} className="mt-1.5 block w-full border border-slate-300 px-3 py-3 outline-none transition focus:border-[#23845f] focus:ring-2 focus:ring-[#23845f]/15" />
                 </label>
               )}
+              {mode === "register" && (
+                <label className="block text-sm font-medium text-slate-700">
+                  Phone number
+                  <input required type="tel" autoComplete="tel" value={phone} onChange={(event) => setPhone(event.target.value)} className="mt-1.5 block w-full border border-slate-300 px-3 py-3 outline-none transition focus:border-[#23845f] focus:ring-2 focus:ring-[#23845f]/15" />
+                </label>
+              )}
               <label className="block text-sm font-medium text-slate-700">
                 Email address
                 <input required type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} className="mt-1.5 block w-full border border-slate-300 px-3 py-3 outline-none transition focus:border-[#23845f] focus:ring-2 focus:ring-[#23845f]/15" />
@@ -204,7 +237,7 @@ export default function MyCommunityPage() {
                 {!busy && <ArrowRight size={17} />}
               </button>
             </form>
-            <p className="mt-5 border-l-2 border-amber-500 bg-amber-50 px-3 py-2.5 text-xs leading-5 text-amber-950">Preview account flow: profile data is stored in this browser only. Connect a backend before using real member accounts.</p>
+            <p className="mt-5 border-l-2 border-[#23845f] bg-[#edf7ef] px-3 py-2.5 text-xs leading-5 text-[#285445]">Your account details are securely processed by the ThirupalTech account service.</p>
           </div>
         </section>
       </div>
