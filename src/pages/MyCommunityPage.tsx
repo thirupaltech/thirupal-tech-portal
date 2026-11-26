@@ -1,10 +1,12 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
-import { ArrowRight, BookOpen, Bot, CalendarDays, Check, CircleUserRound, LogOut, Send, Sparkles, Users } from "lucide-react";
+import { ArrowRight, BookOpen, Bot, CalendarDays, Check, CircleUserRound, LoaderCircle, LogOut, Send, Users } from "lucide-react";
+import ReactMarkdown, { type Components } from "react-markdown";
 import { getCommunityRoute } from "../utils/communityRoutes";
 import { useLocation } from "react-router-dom";
 import { loginUser, registerUser } from "../services/userAuthService";
 import type { CommunityMember } from "../services/userAuthService";
+import { sendCommunityAiMessage } from "../services/communityAiService";
 
 const sessionKey = "thirupal-community-member";
 const tokenKey = "thirupal-community-token";
@@ -12,6 +14,28 @@ const tokenKey = "thirupal-community-token";
 type ChatMessage = {
   role: "user" | "assistant";
   content: string;
+};
+
+const chatMarkdownComponents: Components = {
+  h1: ({ children }) => <h3 className="mb-3 mt-4 text-lg font-bold text-[#183a32] first:mt-0">{children}</h3>,
+  h2: ({ children }) => <h3 className="mb-2 mt-4 text-base font-bold text-[#183a32] first:mt-0">{children}</h3>,
+  h3: ({ children }) => <h4 className="mb-2 mt-3 text-sm font-bold text-[#183a32] first:mt-0">{children}</h4>,
+  p: ({ children }) => <p className="mb-3 last:mb-0">{children}</p>,
+  ul: ({ children }) => <ul className="mb-3 ml-5 list-disc space-y-1 last:mb-0">{children}</ul>,
+  ol: ({ children }) => <ol className="mb-3 ml-5 list-decimal space-y-1 last:mb-0">{children}</ol>,
+  li: ({ children }) => <li className="pl-1">{children}</li>,
+  strong: ({ children }) => <strong className="font-bold text-[#183a32]">{children}</strong>,
+  blockquote: ({ children }) => <blockquote className="mb-3 border-l-2 border-[#8db49a] pl-3 text-slate-600">{children}</blockquote>,
+  hr: () => <hr className="my-4 border-[#e4ece2]" />,
+  a: ({ href, children }) => <a href={href} target="_blank" rel="noreferrer" className="text-[#176347] underline underline-offset-2 hover:text-[#104e39]">{children}</a>,
+  pre: ({ children }) => <pre className="my-3 max-w-full overflow-x-auto rounded-lg bg-[#183a32] p-4 text-xs leading-5 text-[#e7f2e9]">{children}</pre>,
+  code: ({ className, children }) => (
+    <code className={className
+      ? `${className} font-mono text-[0.8rem] text-inherit`
+      : "rounded bg-[#edf3ed] px-1.5 py-0.5 font-mono text-[0.85em] text-[#285445]"}>
+      {children}
+    </code>
+  ),
 };
 
 function readMember(): CommunityMember | null {
@@ -34,6 +58,7 @@ export default function MyCommunityPage() {
   const [busy, setBusy] = useState(false);
   const [chatDraft, setChatDraft] = useState("");
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [chatBusy, setChatBusy] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -66,20 +91,29 @@ export default function MyCommunityPage() {
     setMode("login");
   }
 
-  function handleChatSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleChatSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const question = chatDraft.trim();
-    if (!question) return;
+    if (!question || chatBusy) return;
 
-    setChatMessages((messages) => [
-      ...messages,
-      { role: "user", content: question },
-      {
-        role: "assistant",
-        content: "The chat interface is ready, but an AI service still needs to be connected before I can answer. In the meantime, you can explore the community updates here.",
-      },
-    ]);
+    setChatMessages((messages) => [...messages, { role: "user", content: question }]);
     setChatDraft("");
+    setChatBusy(true);
+
+    try {
+      const answer = await sendCommunityAiMessage(question);
+      setChatMessages((messages) => [...messages, { role: "assistant", content: answer }]);
+    } catch (error) {
+      setChatMessages((messages) => [
+        ...messages,
+        {
+          role: "assistant",
+          content: error instanceof Error ? error.message : "Unable to get a response from Community AI. Please try again.",
+        },
+      ]);
+    } finally {
+      setChatBusy(false);
+    }
   }
 
   if (member) {
@@ -107,7 +141,7 @@ export default function MyCommunityPage() {
                     <p className="text-sm text-slate-500">Your guide to programs, events, and resources</p>
                   </div>
                 </div>
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-[#f2f6f1] px-3 py-1.5 text-xs font-semibold text-[#59806d]"><Sparkles size={13} /> Preview</span>
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-[#f2f6f1] px-3 py-1.5 text-xs font-semibold text-[#59806d]"><span className="h-2 w-2 rounded-full bg-[#23845f]" /> AI assistant</span>
               </header>
 
               <div className="flex min-h-[390px] flex-col bg-[#f8faf7] p-4 md:p-6">
@@ -121,12 +155,24 @@ export default function MyCommunityPage() {
                   {chatMessages.map((chatMessage, index) => (
                     <div key={`${index}-${chatMessage.role}`} className={`flex items-start gap-3 ${chatMessage.role === "user" ? "justify-end" : ""}`}>
                       {chatMessage.role === "assistant" && <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#dcece0] text-[#23845f]"><Bot size={17} /></span>}
-                      <p className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-6 ${chatMessage.role === "user" ? "rounded-tr-sm bg-[#176347] text-white" : "rounded-tl-sm border border-[#e4ece2] bg-white text-slate-700 shadow-sm"}`}>{chatMessage.content}</p>
+                      {chatMessage.role === "assistant" ? (
+                        <div className="min-w-0 max-w-[85%] rounded-2xl rounded-tl-sm border border-[#e4ece2] bg-white px-4 py-3 text-sm leading-6 text-slate-700 shadow-sm">
+                          <ReactMarkdown components={chatMarkdownComponents}>{chatMessage.content}</ReactMarkdown>
+                        </div>
+                      ) : (
+                        <p className="max-w-[85%] rounded-2xl rounded-tr-sm bg-[#176347] px-4 py-3 text-sm leading-6 text-white">{chatMessage.content}</p>
+                      )}
                     </div>
                   ))}
+                  {chatBusy && (
+                    <div className="flex items-center gap-3 text-sm text-slate-500">
+                      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#dcece0] text-[#23845f]"><Bot size={17} /></span>
+                      <span className="inline-flex items-center gap-2"><LoaderCircle size={15} className="animate-spin" /> Thinking...</span>
+                    </div>
+                  )}
                 </div>
 
-                {chatMessages.length === 0 && (
+                {chatMessages.length === 0 && !chatBusy && (
                   <div className="mt-6">
                     <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Try asking</p>
                     <div className="flex flex-wrap gap-2">
@@ -141,10 +187,10 @@ export default function MyCommunityPage() {
 
                 <form onSubmit={handleChatSubmit} className="mt-5 flex items-center gap-2 rounded-xl border border-[#dce4da] bg-white p-2 shadow-sm focus-within:border-[#8db49a]">
                   <label htmlFor="community-ai-message" className="sr-only">Message Community AI</label>
-                  <input id="community-ai-message" value={chatDraft} onChange={(event) => setChatDraft(event.target.value)} placeholder="Ask about your community..." className="min-w-0 flex-1 bg-transparent px-2 py-2 text-sm text-slate-700 outline-none placeholder:text-slate-400" />
-                  <button type="submit" disabled={!chatDraft.trim()} aria-label="Send message" className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-[#176347] text-white transition hover:bg-[#104e39] disabled:cursor-not-allowed disabled:opacity-40"><Send size={17} /></button>
+                  <input id="community-ai-message" value={chatDraft} onChange={(event) => setChatDraft(event.target.value)} disabled={chatBusy} placeholder="Ask about your community..." className="min-w-0 flex-1 bg-transparent px-2 py-2 text-sm text-slate-700 outline-none placeholder:text-slate-400 disabled:opacity-60" />
+                  <button type="submit" disabled={!chatDraft.trim() || chatBusy} aria-label="Send message" className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-[#176347] text-white transition hover:bg-[#104e39] disabled:cursor-not-allowed disabled:opacity-40"><Send size={17} /></button>
                 </form>
-                <p className="mt-2 text-center text-xs text-slate-400">Preview interface — AI responses are not connected yet.</p>
+                <p className="mt-2 text-center text-xs text-slate-400">Community AI can help with education, festivals, agriculture, sports, and more.</p>
               </div>
             </section>
 
