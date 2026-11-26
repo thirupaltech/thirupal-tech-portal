@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { FormEvent } from "react";
 import { ArrowRight, BookOpen, Bot, CalendarDays, Check, CircleUserRound, LoaderCircle, LogOut, Send, Users } from "lucide-react";
 import ReactMarkdown, { type Components } from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { getCommunityRoute } from "../utils/communityRoutes";
 import { useLocation } from "react-router-dom";
 import { loginUser, registerUser } from "../services/userAuthService";
@@ -29,6 +30,14 @@ const chatMarkdownComponents: Components = {
   hr: () => <hr className="my-4 border-[#e4ece2]" />,
   a: ({ href, children }) => <a href={href} target="_blank" rel="noreferrer" className="text-[#176347] underline underline-offset-2 hover:text-[#104e39]">{children}</a>,
   pre: ({ children }) => <pre className="my-3 max-w-full overflow-x-auto rounded-lg bg-[#183a32] p-4 text-xs leading-5 text-[#e7f2e9]">{children}</pre>,
+  table: ({ children }) => (
+    <div className="my-3 max-w-full overflow-x-auto rounded-lg border border-[#e4ece2]">
+      <table className="w-full border-collapse text-left text-xs">{children}</table>
+    </div>
+  ),
+  thead: ({ children }) => <thead className="bg-[#edf3ed] text-[#183a32]">{children}</thead>,
+  th: ({ children }) => <th className="border-b border-[#dce4da] px-3 py-2 font-semibold">{children}</th>,
+  td: ({ children }) => <td className="border-b border-[#eef2ed] px-3 py-2 align-top">{children}</td>,
   code: ({ className, children }) => (
     <code className={className
       ? `${className} font-mono text-[0.8rem] text-inherit`
@@ -157,7 +166,7 @@ export default function MyCommunityPage() {
                       {chatMessage.role === "assistant" && <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#dcece0] text-[#23845f]"><Bot size={17} /></span>}
                       {chatMessage.role === "assistant" ? (
                         <div className="min-w-0 max-w-[85%] rounded-2xl rounded-tl-sm border border-[#e4ece2] bg-white px-4 py-3 text-sm leading-6 text-slate-700 shadow-sm">
-                          <ReactMarkdown components={chatMarkdownComponents}>{chatMessage.content}</ReactMarkdown>
+                          <ReactMarkdown remarkPlugins={[remarkGfm]} components={chatMarkdownComponents}>{chatMessage.content}</ReactMarkdown>
                         </div>
                       ) : (
                         <p className="max-w-[85%] rounded-2xl rounded-tr-sm bg-[#176347] px-4 py-3 text-sm leading-6 text-white">{chatMessage.content}</p>
